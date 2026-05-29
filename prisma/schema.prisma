@@ -1,0 +1,227 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model DailyPrice {
+  id          Int      @id @default(autoincrement())
+  tradingCode String   @map("trading_code")
+  date        DateTime @db.Date
+  open        Float?
+  high        Float?
+  low         Float?
+  close       Float?
+  volume      Float?
+  tradeCount  Float?   @map("trade_count")
+  source      String
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@unique([tradingCode, date])
+  @@map("daily_prices")
+}
+
+model IntradayPrice {
+  id          Int      @id @default(autoincrement())
+  tradingCode String   @map("trading_code")
+  timestamp   DateTime
+  ltp         Float?
+  high        Float?
+  low         Float?
+  volume      Float?
+  tradeCount  Float?   @map("trade_count")
+  source      String
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([tradingCode, timestamp])
+  @@map("intraday_prices")
+}
+
+model StockUniverse {
+  id          Int      @id @default(autoincrement())
+  tradingCode String   @map("trading_code")
+  marketDate  DateTime @map("market_date") @db.Date
+  isActive    Boolean  @default(true) @map("is_active")
+  source      String
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@unique([tradingCode, marketDate])
+  @@map("stock_universe")
+}
+
+model Feature {
+  id                Int      @id @default(autoincrement())
+  tradingCode       String   @map("trading_code")
+  date              DateTime @db.Date
+  featureSetVersion String   @map("feature_set_version")
+  featuresJson      Json?    @map("features_json")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  @@unique([tradingCode, date, featureSetVersion])
+  @@map("features")
+}
+
+model Prediction {
+  id             Int      @id @default(autoincrement())
+  tradingCode    String   @map("trading_code")
+  date           DateTime @db.Date
+  predictionTime DateTime @map("prediction_time")
+  probabilityUp  Float    @map("probability_up")
+  signal         String
+  threshold      Float
+  modelVersion   String   @map("model_version")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@map("predictions")
+}
+
+model Signal {
+  id             Int      @id @default(autoincrement())
+  ticker         String
+  signalDate     DateTime @map("signal_date") @db.Date
+  probabilityUp  Float    @map("probability_up")
+  signal         String
+  modelVersion   String   @map("model_version")
+  latestPrice    Float?   @map("latest_price")
+  vwapDeviation  Float?   @map("vwap_deviation")
+  volumeStatus   String?  @map("volume_status")
+  liquidityFlag  Boolean  @default(false) @map("liquidity_flag")
+  floorPriceFlag Boolean  @default(false) @map("floor_price_flag")
+  reasonCodes    String?  @map("reason_codes")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@map("signals")
+}
+
+model ModelRegistry {
+  id                Int      @id @default(autoincrement())
+  modelVersion      String   @unique @map("model_version")
+  trainingStartDate DateTime? @map("training_start_date") @db.Date
+  trainingEndDate   DateTime? @map("training_end_date") @db.Date
+  validationPeriod  String?  @map("validation_period")
+  testPeriod        String?  @map("test_period")
+  featureSetVersion String?  @map("feature_set_version")
+  threshold         Float?
+  precision         Float?
+  recall            Float?
+  f1Score           Float?   @map("f1_score")
+  rocAuc            Float?   @map("roc_auc")
+  prAuc             Float?   @map("pr_auc")
+  modelPath         String?  @map("model_path")
+  featureListPath   String?  @map("feature_list_path")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  @@map("model_registry")
+}
+
+model PaperAccount {
+  id                       Int      @id @default(autoincrement())
+  userId                   String   @default("single-user") @map("user_id")
+  accountName              String   @default("Paper Portfolio") @map("account_name")
+  startingCapitalBdt       Float    @map("starting_capital_bdt")
+  cashBalanceBdt           Float    @map("cash_balance_bdt")
+  currentPortfolioValueBdt Float    @map("current_portfolio_value_bdt")
+  mode                     String   @default("paper")
+  createdAt                DateTime @default(now()) @map("created_at")
+  updatedAt                DateTime @updatedAt @map("updated_at")
+  positions                PaperPosition[]
+  trades                   PaperTrade[]
+  equityCurve              PaperEquityCurve[]
+
+  @@map("paper_accounts")
+}
+
+model PaperPosition {
+  id            Int      @id @default(autoincrement())
+  accountId     Int      @map("account_id")
+  ticker        String
+  quantity      Float
+  averagePrice  Float    @map("average_price")
+  latestPrice   Float?   @map("latest_price")
+  marketValue   Float    @default(0) @map("market_value")
+  state         String
+  settlementDate DateTime @map("settlement_date") @db.Date
+  realizedPnl   Float    @default(0) @map("realized_pnl")
+  unrealizedPnl Float    @default(0) @map("unrealized_pnl")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  account       PaperAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@map("paper_positions")
+}
+
+model PaperTrade {
+  id              Int      @id @default(autoincrement())
+  accountId       Int      @map("account_id")
+  ticker          String
+  action          String
+  quantity        Float
+  price           Float
+  grossValue      Float    @map("gross_value")
+  transactionCost Float    @map("transaction_cost")
+  slippage        Float
+  netValue        Float    @map("net_value")
+  tradeDate       DateTime @map("trade_date") @db.Date
+  settlementDate  DateTime @map("settlement_date") @db.Date
+  status          String
+  realizedPnl     Float    @default(0) @map("realized_pnl")
+  notes           String?
+  createdAt       DateTime @default(now()) @map("created_at")
+  account         PaperAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@map("paper_trades")
+}
+
+model PaperEquityCurve {
+  id               Int      @id @default(autoincrement())
+  accountId        Int      @map("account_id")
+  date             DateTime @db.Date
+  cashBalance      Float    @map("cash_balance")
+  holdingsValue    Float    @map("holdings_value")
+  pendingValue     Float    @map("pending_value")
+  totalEquity      Float    @map("total_equity")
+  dailyPnl         Float    @default(0) @map("daily_pnl")
+  cumulativeReturn Float    @default(0) @map("cumulative_return")
+  createdAt        DateTime @default(now()) @map("created_at")
+  account          PaperAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@unique([accountId, date])
+  @@map("paper_equity_curve")
+}
+
+model WatchlistItem {
+  id        Int      @id @default(autoincrement())
+  userId    String   @default("single-user") @map("user_id")
+  ticker    String
+  notes     String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, ticker])
+  @@map("watchlist")
+}
+
+model BacktestRun {
+  id                    Int      @id @default(autoincrement())
+  userId                String   @default("single-user") @map("user_id")
+  runName               String   @map("run_name")
+  startDate             DateTime @map("start_date") @db.Date
+  endDate               DateTime @map("end_date") @db.Date
+  startingCapitalBdt    Float    @map("starting_capital_bdt")
+  maxAllocationPerStock Float    @map("max_allocation_per_stock")
+  maxOpenPositions      Int      @map("max_open_positions")
+  buyThreshold          Float    @map("buy_threshold")
+  slippageRate          Float    @map("slippage_rate")
+  transactionCostRate   Float    @map("transaction_cost_rate")
+  status                String
+  resultJson            Json?    @map("result_json")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  @@map("backtest_runs")
+}
+
