@@ -58,9 +58,20 @@ export function TradeForm({ tickers, accountId }: { tickers: string[]; accountId
       <div className="grid gap-4 md:grid-cols-2">
         <label className="grid gap-2">
           <span className="text-sm font-medium">Ticker</span>
-          <select className="h-10 rounded-md border bg-background px-3 text-sm" value={ticker} onChange={(event) => setTicker(event.target.value)}>
-            {tickers.map((code) => <option key={code} value={code}>{code}</option>)}
-          </select>
+          <Input
+            value={ticker}
+            onChange={(event) => setTicker(event.target.value.toUpperCase().trim())}
+            placeholder={tickers.length ? "Select or type ticker, e.g. BATBC" : "Type ticker, e.g. BATBC"}
+            list="ticker-options"
+          />
+          <datalist id="ticker-options">
+            {tickers.map((code) => <option key={code} value={code} />)}
+          </datalist>
+          {!tickers.length ? (
+            <span className="text-xs text-muted-foreground">
+              No ticker data has been loaded yet. You can still type a ticker manually for paper trading.
+            </span>
+          ) : null}
         </label>
         <label className="grid gap-2">
           <span className="text-sm font-medium">Action</span>
@@ -95,4 +106,3 @@ export function TradeForm({ tickers, accountId }: { tickers: string[]; accountId
     </Card>
   );
 }
-
